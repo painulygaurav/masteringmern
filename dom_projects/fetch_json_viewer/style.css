@@ -1,0 +1,103 @@
+/* ---------- Page ---------- */
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #ffffff;
+  color: #222;
+}
+
+/* ---------- Tree container ---------- */
+#viewer {
+  padding: 12px;
+  font-family: Menlo, Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#viewer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Root list: leave a gutter for the top-level triangles */
+#viewer > ul {
+  padding-left: 14px;
+}
+
+/* Each nested level indents further */
+#viewer ul ul {
+  padding-left: 16px;
+}
+
+/* ---------- Node header ---------- */
+.node {
+  position: relative;
+}
+
+.node-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Triangle sits in the indent gutter, outside the text flow,
+   so keys of leaves and nodes line up automatically */
+.toggle {
+  position: absolute;
+  left: -13px;
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  font-size: 9px;
+  color: #727272;
+  transition: transform 0.1s ease;
+}
+
+/* ---------- Collapse / expand (driven by the .expanded class) ---------- */
+.node:not(.expanded) > ul {
+  display: none;
+}
+
+.node.expanded > .node-header > .toggle {
+  transform: rotate(90deg);
+}
+
+/* ---------- Syntax colours (approx. Chrome light theme) ---------- */
+.key {
+  color: #881391;
+}
+
+.value.string {
+  color: #c41a16;
+}
+
+.value.number,
+.value.boolean {
+  color: #1a1aa6;
+}
+
+.value.null,
+.value.empty {
+  color: #808080;
+}
+
+.length {
+  color: #808080;
+}
+
+.preview {
+  color: #222;
+  font-style: italic;
+}
+
+.value.string {
+  word-break: break-all;
+}
+
+.error {
+  color: #c41a16;
+}
