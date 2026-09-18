@@ -1,0 +1,59 @@
+/* Using variables rather than hardcoded values at the root level for better maintenance*/
+:root {
+  --placeholder-color: #9ca3af;
+  --shape-gap: 10px;
+  --container-top-margin: 40px;
+  --shape-color-input-height: 38px;
+  --shape-height: 50px;
+  --shape-width: 50px;
+  --shape-container-height: 70vh;
+  --circle-border-radius: 50%;
+  --square-border-radius: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.shape-generator {
+  margin-top: var(--container-top-margin);
+}
+
+#shapeType:invalid {
+  color: var(--placeholder-color);
+}
+
+#shapeCount::placeholder {
+  color: var(--placeholder-color);
+}
+
+/*default height is smaller that other input types*/
+#shapeColor {
+  height: var(--shape-color-input-height);
+}
+
+.shape-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--shape-gap);
+  margin-top: var(--container-top-margin);
+
+  height: var(--shape-container-height);
+  box-sizing: border-box;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.shape {
+  width: var(--shape-width);
+  height: var(--shape-height);
+}
+
+.circle {
+  border-radius: var(--circle-border-radius);
+}
+
+.square {
+  border-radius: var(--square-border-radius);
+}
