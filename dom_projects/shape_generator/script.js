@@ -80,9 +80,6 @@ function validateInputs(...inputElements) {
  * @param {string} shapeColor - Background color of each shape
  */
 function drawShapes(container, shapeType, shapeCount, shapeColor) {
-  // Remove previously generated shapes before rendering new ones.
-  container.replaceChildren();
-
   for (let i = 0; i < shapeCount; i++) {
     const shape = document.createElement("div");
 
@@ -132,6 +129,8 @@ generateButton.addEventListener("click", () => {
   // Stop execution if the required inputs are invalid.
   if (!validateInputs(shapeTypeInput, shapeCountInput)) return;
 
+  // Remove previously generated shapes before rendering new ones.
+  shapeContainer.replaceChildren();
   drawShapes(
     shapeContainer,
     shapeTypeInput.value,
@@ -149,7 +148,8 @@ generateRandomColorButton.addEventListener("click", () => {
   if (!validateInputs(shapeTypeInput, shapeCountInput)) return;
 
   const randomColorCode = generateRandomHexColor();
-
+  // Remove previously generated shapes before rendering new ones.
+  shapeContainer.replaceChildren();
   drawShapes(
     shapeContainer,
     shapeTypeInput.value,
