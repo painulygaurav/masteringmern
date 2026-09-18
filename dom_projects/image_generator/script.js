@@ -1,57 +1,135 @@
 /**
- * Task 1 + 2: Generate number of circles as per users demand
- * Input type 1: Type of shape
- * Input type 2: Number of shape
- * Input type 3: Color of shape
- * Button: Generate
- * Output: Clicking on the Generate button will generate the number of shapes in the div container
+ * Colored Shape Generator
+ * Project Features:
+ * 1. Generate a requested number of shapes.
+ * 2. Allow the user to select the shape type.
+ * 3. Allow the user to select the shape color.
+ * 4. Generate shapes with a randomly generated color.
+ * 5. Clear all generated shapes.
+ *
+ * Inputs:
+ * - Shape type
+ * - Number of shapes
+ * - Shape color
+ *
+ * Actions:
+ * - Generate
+ * - Generate with random color
+ * - Clear
+ *
+ * Output:
+ * - Render the generated shapes inside the shape container.
  */
 
 /**
- * All user inputs
+ * User input elements
  */
 const shapeTypeInput = document.querySelector("#shapeType");
 const shapeCountInput = document.querySelector("#shapeCount");
 const shapeColorInput = document.querySelector("#shapeColor");
 
 /**
- * Buttons
+ * Action buttons
  *
- * Using data-* attributes to get stable JavaScript hooks, so we can select buttons by their behavior
- * Styles on class or ids may change in future however using data-* we are being more intentional towards it's behavior
+ * The data-* attributes act as stable JavaScript hooks.
+ * They allow us to select elements based on their behavior
+ * rather than depending on styling classes or structural IDs.
+ *
+ * CSS classes can change as the UI evolves, while data-action
+ * attributes explicitly describe the action handled by JavaScript.
  */
-
 const generateButton = document.querySelector('[data-action="generate"]');
-const clearShapeButton = document.querySelector('[data-action="clear-shapes"');
-const generateRanColorButton = document.querySelector(
+const clearShapeButton = document.querySelector('[data-action="clear-shapes"]');
+const generateRandomColorButton = document.querySelector(
   '[data-action="generate-with-random-color"]',
 );
 
+/**
+ * Shape output container
+ */
 const shapeContainer = document.querySelector(".shape-container");
 
+/**
+ * Reusable functions
+ */
+
+/**
+ * Validates the provided input elements. Returns false even if a single input is missing
+ * Since we have added "required" attribute so it's going to check the validity if the required value is present.
+ *
+ * @param {...HTMLInputElement} inputElements - Inputs to validate
+ * @returns {boolean} Whether all inputs are valid
+ */
 function validateInputs(...inputElements) {
   return inputElements.every((inputElement) => {
     if (!inputElement.checkValidity()) {
       inputElement.reportValidity();
       return false;
     }
+
     return true;
   });
 }
 
-function drawShapes(shapeContainer, shapeType, shapeCount, shapeColor) {
-  // Auto clear before adding any more children
-  shapeContainer.replaceChildren();
+/**
+ * Renders the requested number of shapes.
+ *
+ * @param {HTMLElement} container - Element where shapes are rendered
+ * @param {string} shapeType - CSS class representing the shape type
+ * @param {number} shapeCount - Number of shapes to generate
+ * @param {string} shapeColor - Background color of each shape
+ */
+function drawShapes(container, shapeType, shapeCount, shapeColor) {
+  // Remove previously generated shapes before rendering new ones.
+  container.replaceChildren();
 
   for (let i = 0; i < shapeCount; i++) {
     const shape = document.createElement("div");
+
+    // Apply the base shape class and the selected shape type.
     shape.classList.add("shape", shapeType);
+
+    // Apply the selected or randomly generated background color.
     shape.style.backgroundColor = shapeColor;
-    shapeContainer.appendChild(shape);
+
+    // Add the shape to the output container.
+    container.appendChild(shape);
   }
 }
 
+/**
+ * Generates a random six-character hexadecimal color code.
+ *
+ * @returns {string} A hexadecimal color code
+ */
+function generateRandomHexColor() {
+  let color = "#";
+
+  const HEX_CHARACTERS = "0123456789ABCDEF";
+  const HEX_CODE_LENGTH = 6;
+
+  for (let i = 0; i < HEX_CODE_LENGTH; i++) {
+    const randomCharacterIndex = Math.floor(
+      Math.random() * HEX_CHARACTERS.length,
+    );
+
+    color += HEX_CHARACTERS[randomCharacterIndex];
+  }
+
+  return color;
+}
+
+/**
+ * Event listeners
+ *
+ * Handles:
+ * - Generating shapes with the selected color
+ * - Generating shapes with a random color
+ * - Clearing all generated shapes
+ */
+
 generateButton.addEventListener("click", () => {
+  // Stop execution if the required inputs are invalid.
   if (!validateInputs(shapeTypeInput, shapeCountInput)) return;
 
   drawShapes(
@@ -62,13 +140,16 @@ generateButton.addEventListener("click", () => {
   );
 });
 
-// Clear children on demand
 clearShapeButton.addEventListener("click", () => {
+  // Remove all generated shapes from the container.
   shapeContainer.replaceChildren();
 });
 
-generateRanColorButton.addEventListener("click", () => {
-  const randomColorCode = randomHexCodeGenerator();
+generateRandomColorButton.addEventListener("click", () => {
+  if (!validateInputs(shapeTypeInput, shapeCountInput)) return;
+
+  const randomColorCode = generateRandomHexColor();
+
   drawShapes(
     shapeContainer,
     shapeTypeInput.value,
@@ -76,15 +157,3 @@ generateRanColorButton.addEventListener("click", () => {
     randomColorCode,
   );
 });
-
-function randomHexCodeGenerator() {
-  let color = "#";
-  const HEX_COLORS = "0123456789ABCDEF";
-  const HEX_CODE_LENGTH = 6;
-
-  for (let i = 0; i < HEX_CODE_LENGTH; i++) {
-    let randomCharIndex = Math.floor(Math.random() * HEX_COLORS.length);
-    color += HEX_COLORS[randomCharIndex];
-  }
-  return color;
-}
