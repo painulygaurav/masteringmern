@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <canvas
+      id="drawCanvas"
+      width="600"
+      height="400"
+      style="border: 1px solid #000"
+    ></canvas>
+    <script>
+      const canvas = document.getElementById("drawCanvas");
+      const ctx = canvas.getContext("2d");
+
+      let isDrawing = false;
+      let startX = 0;
+      let startY = 0;
+
+      // Set drawing styles
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#000000";
+
+      // 1. Start drawing on press (mousedown)
+      canvas.addEventListener("mousedown", (e) => {
+        isDrawing = true;
+        startX = e.offsetX;
+        startY = e.offsetY;
+      });
+
+      // 2. Draw lines while dragging (mousemove)
+      canvas.addEventListener("mousemove", (e) => {
+        if (!isDrawing) return; // Exit if mouse is not pressed
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY); // Move cursor to last known position
+        ctx.lineTo(e.offsetX, e.offsetY); // Draw line to current mouse position
+        ctx.stroke(); // Render the line
+
+        // Reset the starting point to the current position for smooth continuation
+        startX = e.offsetX;
+        startY = e.offsetY;
+      });
+
+      // 3. Stop drawing on release (mouseup or mouseout)
+      window.addEventListener("mouseup", () => {
+        isDrawing = false;
+      });
+
+      canvas.addEventListener("mouseout", () => {
+        isDrawing = false;
+      });
+    </script>
+  </body>
+</html>
