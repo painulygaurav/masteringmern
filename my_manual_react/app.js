@@ -50,6 +50,7 @@ function createDOM(vnode) {
 }
 
 // now we need to render
+// This function is responsible for adding the fiber node to the root container
 function render(vnode, container) {
   const dom = createDOM(vnode);
 
@@ -69,6 +70,7 @@ function setState(newValue) {
   renderApp();
 }
 
+// Basically creating a component (HTML that we want to put inside the container)
 function App() {
   return createElement(
     "div",

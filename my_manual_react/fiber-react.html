@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mini React — Fiber Version</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 640px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      button {
+        margin-right: 8px;
+        padding: 6px 14px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #root {
+        border: 1px solid #ddd;
+        padding: 16px;
+        border-radius: 6px;
+        margin-top: 16px;
+      }
+      #log {
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        color: #555;
+        white-space: pre-wrap;
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Mini React — Fiber Reconciliation</h2>
+    <p>
+      Open devtools to see per-render commit logs (only changed DOM nodes are
+      touched).
+    </p>
+    <div id="root"></div>
+    <div id="log"></div>
+
+    <script>
+      /* =========================================================================
+   1. createElement — same as before. Produces plain "React element" objects.
+      Primitive children (strings/numbers) get wrapped into a TEXT_ELEMENT
+      so createDom can treat every child uniformly as {type, props}.
+   ========================================================================= */
+      function createElement(type, props = {}, ...children) {
+        return {
+          type,
+          props: {
+            ...props,
+            children: children.map((child) =>
+              typeof child === "object" ? child : createTextElement(child),
+            ),
+          },
+        };
+      }
+
+      function createTextElement(text) {
+        return {
+          type: "TEXT_ELEMENT",
+          props: { nodeValue: text, children: [] },
+        };
+      }
+
+      /* =========================================================================
+   2. Prop helpers — used both when creating a DOM node and when diffing
+      an existing one against its previous props.
+   ========================================================================= */
+      const isEvent = (key) => key.startsWith("on");
+      const isProperty = (key) => key !== "children" && !isEvent(key);
+      const isNew = (prev, next) => (key) => prev[key] !== next[key];
+      const isGone = (prev, next) => (key) => !(key in next);
+
+      function createDom(fiber) {
+        const dom =
+          fiber.type === "TEXT_ELEMENT"
+            ? document.createTextNode("")
+            : document.createElement(fiber.type);
+
+        updateDom(dom, {}, fiber.props);
+        return dom;
+      }
+
+      // Reconciles the DOM node's actual attributes/listeners with the fiber's
+      // new props. This is the step that replaces "wipe and rebuild": only the
+      // props that actually changed are touched.
+      function updateDom(dom, prevProps, nextProps) {
+        // Remove old or changed event listeners
+        Object.keys(prevProps)
+          .filter(isEvent)
+          .filter(
+            (key) => !(key in nextProps) || isNew(prevProps, nextProps)(key),
+          )
+          .forEach((name) => {
+            const eventName = name.slice(2).toLowerCase();
+            dom.removeEventListener(eventName, prevProps[name]);
+          });
+
+        // Remove old properties that are gone in the new props
+        Object.keys(prevProps)
+          .filter(isProperty)
+          .filter(isGone(prevProps, nextProps))
+          .forEach((name) => {
+            dom[name] = "";
+          });
+
+        // Set new or changed properties
+        Object.keys(nextProps)
+          .filter(isProperty)
+          .filter(isNew(prevProps, nextProps))
+          .forEach((name) => {
+            dom[name] = nextProps[name];
+          });
+
+        // Add new event listeners
+        Object.keys(nextProps)
+          .filter(isEvent)
+          .filter(isNew(prevProps, nextProps))
+          .forEach((name) => {
+            const eventName = name.slice(2).toLowerCase();
+            dom.addEventListener(eventName, nextProps[name]);
+          });
+      }
+
+      /* =========================================================================
+   3. Fiber tree state.
+      currentRoot  -> the fiber tree that is currently on screen
+      wipRoot      -> the "work in progress" tree being built for this render
+      nextUnitOfWork -> the next fiber to process (child/sibling/uncle walk)
+      deletions    -> fibers present in the old tree but absent from the new
+                      one; the render phase can't delete them (only wipRoot
+                      is walked), so we track them separately for commit.
+   ========================================================================= */
+      let nextUnitOfWork = null;
+      let currentRoot = null;
+      let wipRoot = null;
+      let deletions = null;
+
+      function render(element, container) {
+        wipRoot = {
+          dom: container,
+          props: { children: [element] },
+          alternate: currentRoot, // <- the link between old tree and new tree
+        };
+        deletions = [];
+        nextUnitOfWork = wipRoot;
+      }
+
+      /* =========================================================================
+   4. The incremental work loop.
+      Real Fiber uses requestIdleCallback (and now a lane/priority scheduler)
+      so it can pause between fibers and yield to the browser for input,
+      animation, etc. We do the same here at a toy level: each call to
+      workLoop only keeps working while the browser reports idle time left.
+   ========================================================================= */
+      function workLoop(deadline) {
+        let shouldYield = false;
+        while (nextUnitOfWork && !shouldYield) {
+          nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+          shouldYield = deadline.timeRemaining() < 1;
+        }
+
+        // Once there's no more work, the whole work-in-progress tree is ready —
+        // commit it to the real DOM in one synchronous pass.
+        if (!nextUnitOfWork && wipRoot) {
+          commitRoot();
+        }
+
+        requestIdleCallback(workLoop);
+      }
+      requestIdleCallback(workLoop);
+
+      /* =========================================================================
+   5. performUnitOfWork — processes ONE fiber:
+        a) ensure it has a DOM node
+        b) reconcile its children against the old fiber's children
+        c) return the next fiber to visit (child, then sibling, then "uncle")
+      This depth-first-with-return-pointer walk is what fiber's child/
+      sibling/return links are for — it replaces recursive call-stack
+      traversal so the walk can be paused and resumed.
+   ========================================================================= */
+      function performUnitOfWork(fiber) {
+        if (!fiber.dom) {
+          fiber.dom = createDom(fiber);
+        }
+
+        const elements = fiber.props.children;
+        reconcileChildren(fiber, elements);
+
+        if (fiber.child) return fiber.child;
+
+        let nextFiber = fiber;
+        while (nextFiber) {
+          if (nextFiber.sibling) return nextFiber.sibling;
+          nextFiber = nextFiber.return;
+        }
+        return null;
+      }
+
+      /* =========================================================================
+   6. reconcileChildren — the actual diffing step.
+      Walks the new elements alongside the corresponding fiber from the
+      OLD tree (via fiber.alternate.child, then .sibling), comparing by
+      type (a stand-in for React's type+key comparison) and deciding:
+        - same type       -> UPDATE  (reuse the DOM node, patch props)
+        - different type   -> PLACEMENT for the new one, DELETION for the old
+        - only in new tree -> PLACEMENT
+        - only in old tree -> DELETION
+   ========================================================================= */
+      function reconcileChildren(wipFiber, elements) {
+        let index = 0;
+        let oldFiber = wipFiber.alternate && wipFiber.alternate.child;
+        let prevSibling = null;
+
+        while (index < elements.length || oldFiber != null) {
+          const element = elements[index];
+          let newFiber = null;
+
+          const sameType =
+            oldFiber && element && element.type === oldFiber.type;
+
+          if (sameType) {
+            newFiber = {
+              type: oldFiber.type,
+              props: element.props,
+              dom: oldFiber.dom, // <- reuse the existing DOM node
+              return: wipFiber,
+              alternate: oldFiber,
+              effectTag: "UPDATE",
+            };
+          }
+          if (element && !sameType) {
+            newFiber = {
+              type: element.type,
+              props: element.props,
+              dom: null, // <- will be created fresh in performUnitOfWork
+              return: wipFiber,
+              alternate: null,
+              effectTag: "PLACEMENT",
+            };
+          }
+          if (oldFiber && !sameType) {
+            oldFiber.effectTag = "DELETION";
+            deletions.push(oldFiber);
+          }
+
+          if (oldFiber) oldFiber = oldFiber.sibling;
+
+          if (index === 0) {
+            wipFiber.child = newFiber;
+          } else if (element) {
+            prevSibling.sibling = newFiber;
+          }
+          prevSibling = newFiber;
+          index++;
+        }
+      }
+
+      /* =========================================================================
+   7. Commit phase — synchronous, mutates the real DOM.
+      This is deliberately separate from the render phase above: the render
+      phase can be interrupted/resumed, but once we start touching the
+      actual DOM we run straight through so the user never sees a half
+      applied tree.
+   ========================================================================= */
+      function commitRoot() {
+        deletions.forEach(commitWork);
+        commitWork(wipRoot.child);
+        currentRoot = wipRoot;
+        wipRoot = null;
+        logCommit(deletions.length);
+      }
+
+      function commitWork(fiber) {
+        if (!fiber) return;
+
+        const parentDom = fiber.return.dom;
+
+        if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
+          parentDom.appendChild(fiber.dom);
+        } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+          updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+        } else if (fiber.effectTag === "DELETION") {
+          parentDom.removeChild(fiber.dom);
+          return; // deleted subtree: no children/siblings to recurse into
+        }
+
+        commitWork(fiber.child);
+        commitWork(fiber.sibling);
+      }
+
+      function logCommit(deletionCount) {
+        const el = document.getElementById("log");
+        const ts = new Date().toLocaleTimeString();
+        el.textContent += `[${ts}] commit — ${deletionCount} deletion(s), rest were UPDATE/PLACEMENT on existing nodes\n`;
+      }
+
+      /* =========================================================================
+   8. App code — unchanged in spirit from the non-fiber version. Note that
+      setState now calls render() again with the SAME container; because
+      wipRoot.alternate = currentRoot, the diff above reuses the existing
+      <div>/<h1>/<p>/<button> DOM nodes and only patches the text node
+      showing the count and re-binds the button handlers (they're new
+      closures each render, so those DO get treated as changed props).
+   ========================================================================= */
+      function Welcome() {
+        return createElement("h1", {}, "Welcome from Gaurav!");
+      }
+
+      let state = 0;
+
+      function setState(newValue) {
+        state = newValue;
+        renderApp();
+      }
+
+      function App() {
+        return createElement(
+          "div",
+          {},
+          createElement("h1", {}, "my manual react (fiber edition)"),
+          createElement("p", {}, `count:${state}`),
+          createElement(
+            "button",
+            { onclick: () => setState(state + 1) },
+            "increment",
+          ),
+          createElement(
+            "button",
+            { onclick: () => setState(state - 1) },
+            "decrement",
+          ),
+          createElement("button", { onclick: () => setState(0) }, "reset"),
+          Welcome(),
+        );
+      }
+
+      function renderApp() {
+        const container = document.getElementById("root");
+        render(App(), container);
+      }
+
+      renderApp();
+    </script>
+  </body>
+</html>
