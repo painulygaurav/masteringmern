@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 const App = () => {
   const [count, setCount] = useState(0);
+  const [name, setName] = useState("");
   const ref = useRef(0);
   const ref1 = useRef(); // What is the meaning of empty ref
   // State vs Variables
@@ -33,6 +34,14 @@ const App = () => {
     <div>
       <h1 ref={ref1}>Count:{count}</h1>
       <button onClick={handleClick}>Change</button>
+      <input
+        onChange={(e) => setName(e.target.value)}
+        type="text"
+        value={name}
+        name=""
+        id=""
+        placeholder="Enter any name"
+      />
     </div>
   );
 };
