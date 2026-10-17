@@ -1,0 +1,21 @@
+{
+  "name": "01_first_node_project",
+  "version": "1.0.0",
+  "description": "my first node project",
+  "keywords": [
+    "Node",
+    "NodeJS",
+    "Event"
+  ],
+  "license": "ISC",
+  "author": "Gaurav Painuly",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "dependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
