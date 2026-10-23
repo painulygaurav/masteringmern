@@ -14,8 +14,26 @@ const server = http.createServer((req, res) => {
     // join all the bytes first, then decode once, so split characters stay intact.
     // convert the incoming data into a string and add it to the request body
     req.body = Buffer.concat(chunks).toString();
-    console.log(req.body);
-    res.end("ok");
+    console.log("body:" + req.body);
+    console.log("url:" + req.url);
+    console.log("method" + req.method);
+    console.log("header" + req.headers);
+    res.writeHead(200, {
+      "Content-Type": "application/json",
+      author: "Gaurav",
+      "Access-Control-Allow_Origin": "*",
+    });
+
+    res.end(
+      JSON.stringify({
+        message: "hello world",
+        body: Buffer.concat(chunks).toString(),
+      }),
+    );
+  });
+  req.on("error", (err) => {
+    console.log("error", err);
+    res.writeHead(400, { "Content-Type": "application/json" });
   });
 });
 
