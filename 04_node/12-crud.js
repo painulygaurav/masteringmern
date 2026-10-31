@@ -27,6 +27,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { rateLimit } from "express-rate-limit";
+import jwt from "jsonwebtoken";
 
 const app = express();
 app.use(express.json());
@@ -99,10 +100,64 @@ app.post("/api/v1/auth/login", async (req, res) => {
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return res.status(400).json({ message: "Incorrect password!" });
-  res.status(200).json({ message: "login successful", user });
+  // Once password matches and I send the successful login message I will first do the jwt token based authentication
+  //token assignment
+  //
+  // AUTH FLOW (password vs token):
+  // 1. Login (password is used only here, once):
+  //    client sends email + password -> find user by email
+  //    -> bcrypt.compare() checks the password  (BEFORE the token)
+  //    -> if it matches, jwt.sign() creates the token -> send the token to the client
+  //    Wrong password = 400 and no token is created.
+  // 2. Every later request (no password needed):
+  //    client sends header "Authorization: Bearer <token>"
+  //    -> verifyToken middleware runs jwt.verify(token, secret)
+  //    -> if valid, sets req.user = decoded payload and calls next()
+  // Password proves who the user is once; after that the token proves it on
+  // each request, so there's no database lookup or bcrypt check every time.
+  //
+  // "secret123" is NOT the user's password. It's one server-side key used to
+  // sign tokens for ALL users (move it to .env as JWT_SECRET).
+  const token = jwt.sign(
+    {
+      userId: user._id,
+      email: user.email,
+      role: "admin",
+    },
+    "secret123",
+  );
+  //console.log(token);
+
+  res.cookie("jwt-token", token, {
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: true,
+    secure: true,
+  });
+  // we have saved the cookie now we just need to remember our signature and we can use a middleware to check if it's a valid user
+  res.status(200).json({ message: "login successful", token });
 });
 
-app.get("/api/v1/users", limiter, async (req, res) => {
+//token middleware
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization;
+  if (!token || !token.startsWith("Bearer "))
+    return res.status(401).json({ message: "Invalid token!" });
+
+  const tokenValue = token.split(" ")[1];
+  try {
+    const isVerified = jwt.verify(tokenValue, "secret123");
+    req.user = isVerified;
+    //console.log(JSON.stringify(req.user));
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token!" });
+  }
+};
+// so now you can add role as well to the schema and store it in the database and check if a user has certain roles
+
+app.get("/api/v1/users", /*limiter,*/ verifyToken, async (req, res) => {
+  //console.log(JSON.stringify(req.user));
   const users = await User.find();
   if (!users) return res.status(404).json({ message: "No users found" });
   res.status(200).json({ message: "All users fetched", users });
