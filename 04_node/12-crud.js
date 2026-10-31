@@ -26,11 +26,25 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { rateLimit } from "express-rate-limit";
 
 const app = express();
 app.use(express.json());
 dotenv.config();
 const PORT = process.env.PORT || 5000;
+
+// rate limit
+const message = {
+  message:
+    "too many request from this ip address please try again after sometimes",
+  success: false,
+};
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1, // limit each IP to 5 requests per windowMS
+  message,
+});
 
 // Three steps:
 // 1. Connection to db
@@ -88,7 +102,7 @@ app.post("/api/v1/auth/login", async (req, res) => {
   res.status(200).json({ message: "login successful", user });
 });
 
-app.get("/api/v1/users", async (req, res) => {
+app.get("/api/v1/users", limiter, async (req, res) => {
   const users = await User.find();
   if (!users) return res.status(404).json({ message: "No users found" });
   res.status(200).json({ message: "All users fetched", users });

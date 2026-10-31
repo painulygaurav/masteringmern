@@ -10,22 +10,21 @@
   "license": "ISC",
   "author": "Gaurav Painuly",
   "type": "module",
-  "main": "index.js",
+  "main": "1-index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon 14-crud.js"
+    "start": "nodemon 13-multer.js"
   },
   "dependencies": {
-<<<<<<< HEAD
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.9",
-    "express": "^5.3.0",
-    "mongoose": "^9.11.4",
-=======
     "ejs": "^7.0.2",
     "express": "^5.3.0",
+    "express-rate-limit": "^8.7.2",
+    "mongoose": "^9.11.4",
     "morgan": "^1.12.1",
->>>>>>> main
+    "multer": "^2.5.0",
+    "nodemailer": "^10.3.1",
     "nodemon": "^3.1.14"
   }
 }
